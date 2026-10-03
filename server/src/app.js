@@ -9,8 +9,27 @@ const cors = require("cors");
 
 const app = express();
 
-// Middleware
-app.use(cors());
+// ── CORS ──────────────────────────────────────────────────────────────────────
+// In production only the deployed frontend is allowed.
+// In development any localhost origin is permitted.
+const allowedOrigins = [
+  process.env.CLIENT_URL,           // e.g. https://academic-print-manager.vercel.app
+  "http://localhost:5173",           // Vite dev server
+  "http://localhost:4173",           // Vite preview
+].filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (curl, Postman, server-to-server)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      callback(new Error(`CORS: origin '${origin}' not allowed`));
+    },
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 
 // Routes

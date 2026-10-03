@@ -1,21 +1,32 @@
 /**
  * Firebase Admin SDK — FCM push notification service.
  * Initialised once at module load; all other files import sendPush() from here.
+ *
+ * Credentials are loaded from the FIREBASE_SERVICE_ACCOUNT_JSON environment
+ * variable (a JSON string) so no credential file needs to be committed or
+ * deployed alongside the code.
  */
 const admin = require("firebase-admin");
-const path  = require("path");
 
 // Initialise only once (guard against hot-reload double-init in dev)
 if (!admin.apps.length) {
-  const serviceAccount = require(
-    path.join(__dirname, "../../config/academic-print-manager-79526-firebase-adminsdk-fbsvc-1633e58ef3.json")
-  );
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+
+  if (!raw) {
+    console.warn(
+      "[FCM] FIREBASE_SERVICE_ACCOUNT_JSON is not set — push notifications will be disabled."
+    );
+  } else {
+    try {
+      const serviceAccount = JSON.parse(raw);
+      admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+    } catch (err) {
+      console.error("[FCM] Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON:", err.message);
+    }
+  }
 }
 
-const messaging = admin.messaging();
+const messaging = admin.apps.length ? admin.messaging() : null;
 
 /**
  * Send a push notification to one or more FCM tokens.
@@ -27,6 +38,10 @@ const messaging = admin.messaging();
  * @returns {Promise<{ sent: number, failed: number, invalidTokens: string[] }>}
  */
 const sendPush = async (tokens, title, body, data = {}) => {
+  if (!messaging) {
+    console.warn("[FCM] Firebase not initialised — skipping push notification.");
+    return { sent: 0, failed: 0, invalidTokens: [] };
+  }
   if (!tokens || tokens.length === 0) {
     return { sent: 0, failed: 0, invalidTokens: [] };
   }
