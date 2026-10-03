@@ -1,0 +1,5 @@
+node_modules/
+.env
+
+# All credential/key files — never commit these
+config/
