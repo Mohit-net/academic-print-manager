@@ -3,3 +3,6 @@ node_modules/
 
 # All credential/key files — never commit these
 config/
+
+# One-time OAuth helper — local use only
+generateGoogleToken.js

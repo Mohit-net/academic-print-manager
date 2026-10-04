@@ -46,12 +46,30 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-app.get("/oauth2callback", (req, res) => {
-  res.send(`
-    <h2>Authorization successful!</h2>
-    <p>You can close this page and return to the terminal.</p>
-    <p>Authorization code received.</p>
-  `);
+app.get("/oauth2callback", async (req, res) => {
+  const code = req.query.code;
+  if (!code) {
+    return res.send("<h2>No code received.</h2>");
+  }
+
+  try {
+    const { google } = require("googleapis");
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      process.env.GOOGLE_REDIRECT_URI,
+    );
+    const { tokens } = await oauth2Client.getToken(code);
+    res.send(`
+      <h2>✅ Authorization successful!</h2>
+      <p>Copy this refresh token into your <code>.env</code> as <code>GOOGLE_REFRESH_TOKEN</code>:</p>
+      <textarea rows="4" cols="80" onclick="this.select()">${tokens.refresh_token || "(no refresh token — try again with prompt=consent)"}</textarea>
+      <p><strong>Access token</strong> (ignore this): ${tokens.access_token?.slice(0, 30)}…</p>
+      <p>You can close this tab.</p>
+    `);
+  } catch (err) {
+    res.send(`<h2>❌ Failed: ${err.message}</h2><p>The code may have expired. <a href="javascript:history.back()">Go back</a> and try again.</p>`);
+  }
 });
 
 // Convert Multer's validation errors into useful client responses instead of
