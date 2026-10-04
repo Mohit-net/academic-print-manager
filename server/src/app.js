@@ -13,22 +13,27 @@ const app = express();
 // In production only the deployed frontend is allowed.
 // In development any localhost origin is permitted.
 const allowedOrigins = [
-  process.env.CLIENT_URL,           // e.g. https://academic-print-manager.vercel.app
-  "http://localhost:5173",           // Vite dev server
-  "http://localhost:4173",           // Vite preview
+  process.env.CLIENT_URL,                                    // set via Render env var
+  "https://academic-print-manager.vercel.app",               // production fallback
+  "http://localhost:5173",                                    // Vite dev server
+  "http://localhost:4173",                                    // Vite preview
 ].filter(Boolean);
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (curl, Postman, server-to-server)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      callback(new Error(`CORS: origin '${origin}' not allowed`));
-    },
-    credentials: true,
-  })
-);
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (curl, Postman, server-to-server)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: origin '${origin}' not allowed`));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+// Handle preflight OPTIONS requests for all routes
+app.options("/{*path}", cors(corsOptions));
+app.use(cors(corsOptions));
 
 app.use(express.json());
 
